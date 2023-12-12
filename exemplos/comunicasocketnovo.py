@@ -12,13 +12,13 @@ while True:
 	if pid==0:
 		serversocket.close()
 		while True:
-			#mensagem = con.recv(1024)
+			mensagem = con.recv(1024)
 			print 'Informe o comando a ser enviado'
 			mensagem = raw_input()
 			if not mensagem: break
 			con.send(mensagem)
-			#os.system(mensagem[:-2])
-			#con.send('mensagem para o cliente')
+			os.system(mensagem[:-2])
+			con.send('mensagem para o cliente')
 		print 'Finalizando cliente'
 		serversocket.close()
 		sys.exit(0)

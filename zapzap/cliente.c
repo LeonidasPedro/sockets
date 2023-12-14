@@ -12,6 +12,27 @@ void error(const char *msg) {
   exit(0);
 }
 
+void handle_received_message(int sender, const char *message) {
+    if (strncmp(message, "global:", 7) == 0) {
+        // Mensagem global
+        printf("Global: %s", message + 7); // Exclui o prefixo "global:"
+        // Broadcast para outros clientes se necessário
+    } else if (strncmp(message, "private:", 8) == 0) {
+        // Mensagem privada
+        int recipient_index;
+        char private_message[256];
+        if (sscanf(message, "private:%d:%s", &recipient_index, private_message) == 2) {
+            printf("Mensagem privada de Cliente %d para Cliente %d: %s\n", sender, recipient_index, private_message);
+            // Envie a mensagem privada para o cliente de índice recipient_index, se necessário
+        } else {
+            printf("Erro ao processar mensagem privada.\n");
+        }
+    } else {
+        // Mensagem desconhecida
+        printf("Mensagem desconhecida: %s", message);
+    }
+}
+
 int main(int argc, char *argv[]) {
   int sockfd, portno, n;
   struct sockaddr_in serv_addr;
@@ -52,7 +73,7 @@ int main(int argc, char *argv[]) {
 
   
 
-  while (1) {
+ while (1) {
     FD_ZERO(&readfds);
     FD_SET(STDIN_FILENO, &readfds);
     FD_SET(sockfd, &readfds);
@@ -61,35 +82,31 @@ int main(int argc, char *argv[]) {
     tv.tv_usec = 0;
 
     if (select(sockfd + 1, &readfds, NULL, NULL, &tv) > 0) {
-      if (FD_ISSET(STDIN_FILENO, &readfds)) {
-        // Leitura da entrada padrão e envio ao servidor
-        bzero(buffer, 256);
-        fgets(buffer, 255, stdin);
-        n = write(sockfd, buffer, strlen(buffer));
+        if (FD_ISSET(STDIN_FILENO, &readfds)) {
+            // Leitura da entrada padrão e envio ao servidor
+            bzero(buffer, 256);
+            fgets(buffer, 255, stdin);
+            n = write(sockfd, buffer, strlen(buffer));
 
-        if (n < 0)
-          error("ERROR writing to socket");
-      }
-
-      if (FD_ISSET(sockfd, &readfds)) {
-        // Leitura da resposta do servidor
-        bzero(buffer, 256);
-        n = read(sockfd, buffer, 255);
-
-        if (n < 0)
-          error("ERROR reading from socket");
-
-        if (strncmp(buffer, "global:", 7) == 0) {
-            printf("Global: %s", buffer + 7); // Exclui o prefixo "global:"
-        } else {
-            printf("Servidor: %s", buffer);
+            if (n < 0)
+                error("ERROR writing to socket");
         }
 
-        int i = strncmp("Bye", buffer, 3);
+        if (FD_ISSET(sockfd, &readfds)) {
+            // Leitura da resposta do servidor
+            bzero(buffer, 256);
+            n = read(sockfd, buffer, 255);
 
-        if (i == 0)
-          break;
-      }
+            if (n < 0)
+                error("ERROR reading from socket");
+
+            handle_received_message(sockfd, buffer);
+
+            int i = strncmp("Bye", buffer, 3);
+
+            if (i == 0)
+                break;
+        }
     }
   }
 

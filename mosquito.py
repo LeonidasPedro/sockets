@@ -21,7 +21,7 @@ client.connect("localhost", 1883, 60)
 client.loop_start()
 
 while True:
-    mensagem = input("Digite a mensagem: ")
+    mensagem = input()
     client.publish("canal1", mensagem)
 
 client.loop_stop()

@@ -39,6 +39,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "ERROR, no such host\n");
     exit(0);
   }
+  printf("Cliente: ");
 
   bzero((char *)&serv_addr, sizeof(serv_addr));
 
@@ -49,7 +50,7 @@ int main(int argc, char *argv[]) {
   if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     error("ERROR connecting");
 
-  printf("Cliente: ");
+  
 
   while (1) {
     FD_ZERO(&readfds);

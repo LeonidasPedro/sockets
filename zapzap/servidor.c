@@ -15,6 +15,18 @@ void error(const char *msg) {
     exit(1);
 }
 
+void send_to_user(int sender, int recipient, const char *message) {
+    char formatted_message[255 + 20];  // Adicione espaço suficiente para o prefixo e destinatário
+    snprintf(formatted_message, sizeof(formatted_message), "private:%d:%s", recipient, message);
+
+    if (client_sockets[recipient] > 0) {
+        int n = write(client_sockets[recipient], formatted_message, strlen(formatted_message));
+        if (n < 0) {
+            error("Erro ao escrever no socket");
+        }
+    }
+}
+
 void broadcast(int sender, const char *message) {
     char formatted_message[255 + 10];  // Adicione espaço suficiente para o prefixo
     snprintf(formatted_message, sizeof(formatted_message), "global:%s", message);
@@ -28,7 +40,6 @@ void broadcast(int sender, const char *message) {
         }
     }
 }
-
 
 void *handle_client(void *arg) {
     int client_socket = *((int *)arg);
@@ -49,7 +60,18 @@ void *handle_client(void *arg) {
         }
 
         printf("Cliente %d: %s\n", client_socket, buffer);
-        broadcast(client_socket, buffer);
+
+        // Verifica se a mensagem é privada e tem um destinatário
+        if (strncmp(buffer, "private:", 8) == 0) {
+            int recipient;
+            if (sscanf(buffer + 8, "%d:", &recipient) == 1) {
+                // Extrai o destinatário da mensagem privada
+                send_to_user(client_socket, recipient, buffer + 8);
+            }
+        } else {
+            // A mensagem não é privada, então é uma mensagem global
+            broadcast(client_socket, buffer);
+        }
     }
 
     close(client_socket);

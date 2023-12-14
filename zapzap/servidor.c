@@ -8,10 +8,27 @@
 
 #define MAX_CLIENTS 8
 
+int client_sockets[MAX_CLIENTS];
+
 void error(const char *msg) {
     perror(msg);
     exit(1);
 }
+
+void broadcast(int sender, const char *message) {
+    char formatted_message[255 + 10];  // Adicione espaço suficiente para o prefixo
+    snprintf(formatted_message, sizeof(formatted_message), "global:%s", message);
+
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (i != sender && client_sockets[i] > 0) {
+            int n = write(client_sockets[i], formatted_message, strlen(formatted_message));
+            if (n < 0) {
+                error("Erro ao escrever no socket");
+            }
+        }
+    }
+}
+
 
 void *handle_client(void *arg) {
     int client_socket = *((int *)arg);
@@ -25,7 +42,14 @@ void *handle_client(void *arg) {
             error("Erro ao ler do socket");
         }
 
+        if (n == 0) {
+            // Cliente desconectado
+            printf("Cliente %d desconectado.\n", client_socket);
+            break;
+        }
+
         printf("Cliente %d: %s\n", client_socket, buffer);
+        broadcast(client_socket, buffer);
     }
 
     close(client_socket);
@@ -42,7 +66,7 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in serv_addr, cli_addr;
     socklen_t clilen;
 
-    int client_sockets[MAX_CLIENTS]; // Array para armazenar os descritores de socket dos clientes
+ // Array para armazenar os descritores de socket dos clientes
     int num_clients = 0;
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -65,7 +89,6 @@ int main(int argc, char *argv[]) {
     while (1) {
         clilen = sizeof(cli_addr);
 
-        // Aceite a conexão
         newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
         if (newsockfd < 0) {
             error("Erro ao aceitar a conexao");
@@ -73,7 +96,6 @@ int main(int argc, char *argv[]) {
 
         printf("Novo cliente conectado.\n");
 
-        // Adicione o novo descritor de socket ao array
         if (num_clients < MAX_CLIENTS) {
             client_sockets[num_clients] = newsockfd;
 
@@ -91,7 +113,6 @@ int main(int argc, char *argv[]) {
             close(newsockfd);
         }
 
-        // Continue aceitando novas conexões e lidando com os clientes nas threads...
     }
 
     // Não alcançará este ponto, mas seria necessário fechar o socket principal

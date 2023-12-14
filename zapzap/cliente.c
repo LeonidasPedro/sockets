@@ -78,7 +78,11 @@ int main(int argc, char *argv[]) {
         if (n < 0)
           error("ERROR reading from socket");
 
-        printf("Servidor: %s", buffer);
+        if (strncmp(buffer, "global:", 7) == 0) {
+            printf("Global: %s", buffer + 7); // Exclui o prefixo "global:"
+        } else {
+            printf("Servidor: %s", buffer);
+        }
 
         int i = strncmp("Bye", buffer, 3);
 
